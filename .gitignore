@@ -1,4 +1,6 @@
 HELP.md
+.env
+.env.*
 target/
 .mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
@@ -33,3 +35,4 @@ build/
 .vscode/
 
 plan.pdf
+database-structure.sql
