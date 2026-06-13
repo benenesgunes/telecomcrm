@@ -22,6 +22,8 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
 	boolean existsByUserIdAndPlanIdAndStatus(Long userId, Long planId, SubscriptionStatus status);
 
+	boolean existsByIdAndUserId(Long id, Long userId);
+
 	@Query("""
 			select s.status as status,
 			       count(s.id) as subscriptionCount

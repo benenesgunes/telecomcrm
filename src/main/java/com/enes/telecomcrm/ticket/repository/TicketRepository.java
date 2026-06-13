@@ -26,6 +26,8 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
 	long countByAssignedAgentIdAndStatus(Long assignedAgentId, TicketStatus status);
 
+	boolean existsByIdAndCustomerId(Long id, Long customerId);
+
 	@Query("""
 			select t.status as status,
 			       count(t.id) as ticketCount
