@@ -1,5 +1,7 @@
 package com.enes.telecomcrm.subscription.controller;
 
+import java.util.List;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.enes.telecomcrm.common.dto.ApiResponse;
 import com.enes.telecomcrm.subscription.dto.PlanRequest;
+import com.enes.telecomcrm.subscription.dto.PlanResponse;
+import com.enes.telecomcrm.subscription.service.PlanService;
 
 import jakarta.validation.Valid;
 
@@ -19,33 +23,39 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/plans")
 public class PlanController {
 
+	private final PlanService planService;
+
+	public PlanController(PlanService planService) {
+		this.planService = planService;
+	}
+
 	@PostMapping
 	@PreAuthorize("hasRole('ADMIN')")
-	public ApiResponse<Void> createPlan(@Valid @RequestBody PlanRequest request) {
-		return ApiResponse.success("Plan created successfully", null);
+	public ApiResponse<PlanResponse> createPlan(@Valid @RequestBody PlanRequest request) {
+		return ApiResponse.success("Plan created successfully", planService.createPlan(request));
 	}
 
 	@GetMapping
 	@PreAuthorize("isAuthenticated()")
-	public ApiResponse<Void> getAllPlans() {
-		return ApiResponse.success("Plans retrieved successfully", null);
+	public ApiResponse<List<PlanResponse>> getAllPlans() {
+		return ApiResponse.success("Plans retrieved successfully", planService.getAllPlans());
 	}
 
 	@GetMapping("/{id}")
 	@PreAuthorize("isAuthenticated()")
-	public ApiResponse<Void> getPlanById(@PathVariable Long id) {
-		return ApiResponse.success("Plan retrieved successfully", null);
+	public ApiResponse<PlanResponse> getPlanById(@PathVariable Long id) {
+		return ApiResponse.success("Plan retrieved successfully", planService.getPlanById(id));
 	}
 
 	@PutMapping("/{id}")
 	@PreAuthorize("hasRole('ADMIN')")
-	public ApiResponse<Void> updatePlan(@PathVariable Long id, @Valid @RequestBody PlanRequest request) {
-		return ApiResponse.success("Plan updated successfully", null);
+	public ApiResponse<PlanResponse> updatePlan(@PathVariable Long id, @Valid @RequestBody PlanRequest request) {
+		return ApiResponse.success("Plan updated successfully", planService.updatePlan(id, request));
 	}
 
 	@DeleteMapping("/{id}")
 	@PreAuthorize("hasRole('ADMIN')")
-	public ApiResponse<Void> deletePlan(@PathVariable Long id) {
-		return ApiResponse.success("Plan deleted successfully", null);
+	public ApiResponse<PlanResponse> deletePlan(@PathVariable Long id) {
+		return ApiResponse.success("Plan deleted successfully", planService.deletePlan(id));
 	}
 }

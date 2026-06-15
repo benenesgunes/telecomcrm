@@ -16,6 +16,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.enes.telecomcrm.user.entity.Role;
+import com.enes.telecomcrm.subscription.service.PlanService;
 import com.enes.telecomcrm.user.service.UserService;
 
 @SpringBootTest
@@ -55,6 +56,9 @@ class SecurityAuthorizationTest {
 
 	@MockitoBean
 	private UserService userService;
+
+	@MockitoBean
+	private PlanService planService;
 
 	@Test
 	void protectedEndpointWithoutAuthenticationReturnsUnauthorized() throws Exception {

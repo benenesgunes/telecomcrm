@@ -15,6 +15,8 @@ public interface PlanRepository extends JpaRepository<Plan, Long> {
 
 	boolean existsByName(String name);
 
+	boolean existsByNameAndIdNot(String name, Long id);
+
 	List<Plan> findByType(PlanType type);
 
 	@Query("""
