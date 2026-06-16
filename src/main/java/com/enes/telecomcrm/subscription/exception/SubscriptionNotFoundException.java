@@ -1,4 +1,10 @@
 package com.enes.telecomcrm.subscription.exception;
 
-public class SubscriptionNotFoundException {
+import com.enes.telecomcrm.common.exception.ResourceNotFoundException;
+
+public class SubscriptionNotFoundException extends ResourceNotFoundException {
+
+	public SubscriptionNotFoundException(Long id) {
+		super("Subscription not found with id: " + id);
+	}
 }
