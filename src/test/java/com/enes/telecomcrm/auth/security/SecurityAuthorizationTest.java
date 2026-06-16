@@ -15,6 +15,7 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.enes.telecomcrm.analytics.service.DashboardService;
 import com.enes.telecomcrm.subscription.service.PlanService;
 import com.enes.telecomcrm.subscription.service.SubscriptionService;
 import com.enes.telecomcrm.ticket.repository.TicketRepository;
@@ -75,6 +76,9 @@ class SecurityAuthorizationTest {
 
 	@MockitoBean
 	private TicketRepository ticketRepository;
+
+	@MockitoBean
+	private DashboardService dashboardService;
 
 	@Test
 	void protectedEndpointWithoutAuthenticationReturnsUnauthorized() throws Exception {
