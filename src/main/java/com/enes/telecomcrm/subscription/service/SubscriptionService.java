@@ -115,16 +115,16 @@ public class SubscriptionService {
 	private void transition(Subscription subscription, SubscriptionStatus targetStatus) {
 		SubscriptionStatus currentStatus = subscription.getStatus();
 
-		if (currentStatus == targetStatus) {
-			return;
-		}
-
 		if (currentStatus == SubscriptionStatus.CANCELLED && targetStatus == SubscriptionStatus.ACTIVE) {
 			throw new BusinessRuleException("Cancelled subscription cannot become active");
 		}
 
 		if (currentStatus == SubscriptionStatus.CANCELLED) {
 			throw new BusinessRuleException("Cancelled subscription cannot be modified");
+		}
+
+		if (currentStatus == targetStatus) {
+			return;
 		}
 
 		if (currentStatus == SubscriptionStatus.EXPIRED && targetStatus != SubscriptionStatus.CANCELLED) {

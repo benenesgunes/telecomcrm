@@ -12,7 +12,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 @RestController
+@Tag(name = "Health", description = "Application and database health checks")
 public class HealthController {
 
 	private final DataSource dataSource;
@@ -22,6 +26,9 @@ public class HealthController {
 	}
 
 	@GetMapping("/health")
+	@Operation(summary = "Health check", description = "Checks application availability and validates the database connection.")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Application and database are up")
+	@io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "503", description = "Database is unavailable")
 	public ResponseEntity<Map<String, Object>> health() {
 		try (Connection connection = dataSource.getConnection();
 				Statement statement = connection.createStatement()) {

@@ -16,18 +16,24 @@ public class TicketEventProducer {
 	private final KafkaTemplate<String, Object> kafkaTemplate;
 	private final String ticketCreatedTopic;
 	private final String ticketResolvedTopic;
+	private final boolean kafkaEnabled;
 
 	public TicketEventProducer(
 			KafkaTemplate<String, Object> kafkaTemplate,
 			@Value("${app.kafka.topics.ticket-created:ticket-created}") String ticketCreatedTopic,
-			@Value("${app.kafka.topics.ticket-resolved:ticket-resolved}") String ticketResolvedTopic
+			@Value("${app.kafka.topics.ticket-resolved:ticket-resolved}") String ticketResolvedTopic,
+			@Value("${app.kafka.enabled:false}") boolean kafkaEnabled
 	) {
 		this.kafkaTemplate = kafkaTemplate;
 		this.ticketCreatedTopic = ticketCreatedTopic;
 		this.ticketResolvedTopic = ticketResolvedTopic;
+		this.kafkaEnabled = kafkaEnabled;
 	}
 
 	public void publishTicketCreated(Ticket ticket) {
+		if (!kafkaEnabled) {
+			return;
+		}
 		TicketCreatedPayload payload = new TicketCreatedPayload(
 				ticket.getId(),
 				ticket.getTitle(),
@@ -39,6 +45,9 @@ public class TicketEventProducer {
 	}
 
 	public void publishTicketResolved(Ticket ticket, long resolutionTimeMinutes) {
+		if (!kafkaEnabled) {
+			return;
+		}
 		TicketResolvedPayload payload = new TicketResolvedPayload(
 				ticket.getId(),
 				ticket.getAssignedAgent() == null ? null : ticket.getAssignedAgent().getId(),

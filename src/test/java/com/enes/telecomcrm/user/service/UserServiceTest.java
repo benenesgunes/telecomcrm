@@ -108,6 +108,14 @@ class UserServiceTest {
 	}
 
 	@Test
+	void updateUser_whenUserDoesNotExistThrowsUserNotFoundException() {
+		UserRequest request = new UserRequest("Jane", "Doe", "jane@example.com", "Secure@123");
+		when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+		assertThrows(UserNotFoundException.class, () -> userService.updateUser(99L, request));
+	}
+
+	@Test
 	void deleteUser_deletesExistingUserAndReturnsMappedResponse() {
 		User user = user(1L, "john@example.com");
 		UserResponse response = response(1L, "john@example.com");
@@ -118,6 +126,13 @@ class UserServiceTest {
 		assertEquals(response, userService.deleteUser(1L));
 		verify(userRepository).delete(user);
 		verify(userSearchIndexService).delete(1L);
+	}
+
+	@Test
+	void deleteUser_whenUserDoesNotExistThrowsUserNotFoundException() {
+		when(userRepository.findById(99L)).thenReturn(Optional.empty());
+
+		assertThrows(UserNotFoundException.class, () -> userService.deleteUser(99L));
 	}
 
 	private User user(Long id, String email) {

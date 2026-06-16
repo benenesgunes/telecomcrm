@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import org.junit.jupiter.api.Test;
@@ -24,7 +25,8 @@ class TicketEventProducerTest {
 	private final TicketEventProducer ticketEventProducer = new TicketEventProducer(
 			kafkaTemplate,
 			"ticket-created",
-			"ticket-resolved"
+			"ticket-resolved",
+			true
 	);
 
 	@Test
@@ -61,6 +63,20 @@ class TicketEventProducerTest {
 		assertEquals(1410L, event.payload().resolutionTimeMinutes());
 		assertEquals(5L, event.payload().customerId());
 		assertEquals("user5@example.com", event.payload().customerEmail());
+	}
+
+	@Test
+	void publishTicketCreated_whenKafkaDisabledDoesNotSendEvent() {
+		TicketEventProducer disabledProducer = new TicketEventProducer(
+				kafkaTemplate,
+				"ticket-created",
+				"ticket-resolved",
+				false
+		);
+
+		disabledProducer.publishTicketCreated(ticket(101L, user(5L, Role.ROLE_USER), null));
+
+		verify(kafkaTemplate, never()).send(eq("ticket-created"), eq("101"), org.mockito.ArgumentMatchers.any());
 	}
 
 	private Ticket ticket(Long id, User customer, User assignedAgent) {

@@ -210,6 +210,48 @@ class SubscriptionServiceTest {
 		assertThrows(BusinessRuleException.class, () -> subscriptionService.suspendSubscription(1L));
 	}
 
+	@Test
+	void cancelSubscription_whenAlreadyCancelledThrowsBusinessRuleException() {
+		Subscription subscription = subscription(1L, user(1L), plan(2L), SubscriptionStatus.CANCELLED);
+		when(subscriptionRepository.findById(1L)).thenReturn(Optional.of(subscription));
+
+		BusinessRuleException exception = assertThrows(
+				BusinessRuleException.class,
+				() -> subscriptionService.cancelSubscription(1L)
+		);
+		assertEquals("Cancelled subscription cannot be modified", exception.getMessage());
+	}
+
+	@Test
+	void cancelSubscription_whenExpiredChangesToCancelledAndSetsEndDate() {
+		Subscription subscription = subscription(1L, user(1L), plan(2L), SubscriptionStatus.EXPIRED);
+		SubscriptionResponse response = response(1L, "CANCELLED");
+
+		when(subscriptionRepository.findById(1L)).thenReturn(Optional.of(subscription));
+		when(subscriptionRepository.save(any(Subscription.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		when(subscriptionMapper.toResponse(any(Subscription.class))).thenReturn(response);
+
+		assertEquals(response, subscriptionService.cancelSubscription(1L));
+		assertEquals(SubscriptionStatus.CANCELLED, subscription.getStatus());
+		assertEquals(LocalDate.now(), subscription.getEndDate());
+	}
+
+	@Test
+	void suspendSubscription_whenExpiredThrowsBusinessRuleException() {
+		Subscription subscription = subscription(1L, user(1L), plan(2L), SubscriptionStatus.EXPIRED);
+		when(subscriptionRepository.findById(1L)).thenReturn(Optional.of(subscription));
+
+		assertThrows(BusinessRuleException.class, () -> subscriptionService.suspendSubscription(1L));
+	}
+
+	@Test
+	void activateSubscription_whenExpiredThrowsBusinessRuleException() {
+		Subscription subscription = subscription(1L, user(1L), plan(2L), SubscriptionStatus.EXPIRED);
+		when(subscriptionRepository.findById(1L)).thenReturn(Optional.of(subscription));
+
+		assertThrows(BusinessRuleException.class, () -> subscriptionService.activateSubscription(1L));
+	}
+
 	private User user(Long id) {
 		return User.builder()
 				.id(id)

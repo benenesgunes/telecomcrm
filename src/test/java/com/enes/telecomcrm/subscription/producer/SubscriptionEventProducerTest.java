@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 
 import java.math.BigDecimal;
@@ -26,7 +27,8 @@ class SubscriptionEventProducerTest {
 	private final KafkaTemplate<String, Object> kafkaTemplate = mock(KafkaTemplate.class);
 	private final SubscriptionEventProducer subscriptionEventProducer = new SubscriptionEventProducer(
 			kafkaTemplate,
-			"subscription-activated"
+			"subscription-activated",
+			true
 	);
 
 	@Test
@@ -46,6 +48,19 @@ class SubscriptionEventProducerTest {
 		assertEquals(3L, event.payload().planId());
 		assertEquals("Home Internet 100Mbps", event.payload().planName());
 		assertEquals(LocalDate.of(2024, 2, 1), event.payload().startDate());
+	}
+
+	@Test
+	void publishSubscriptionActivated_whenKafkaDisabledDoesNotSendEvent() {
+		SubscriptionEventProducer disabledProducer = new SubscriptionEventProducer(
+				kafkaTemplate,
+				"subscription-activated",
+				false
+		);
+
+		disabledProducer.publishSubscriptionActivated(subscription());
+
+		verify(kafkaTemplate, never()).send(eq("subscription-activated"), eq("22"), org.mockito.ArgumentMatchers.any());
 	}
 
 	private Subscription subscription() {

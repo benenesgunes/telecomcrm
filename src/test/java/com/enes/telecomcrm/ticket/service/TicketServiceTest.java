@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -22,6 +23,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.enes.telecomcrm.auth.security.UserPrincipal;
 import com.enes.telecomcrm.common.exception.BusinessRuleException;
+import com.enes.telecomcrm.common.exception.UnauthorizedException;
 import com.enes.telecomcrm.search.service.TicketSearchIndexService;
 import com.enes.telecomcrm.subscription.entity.SubscriptionStatus;
 import com.enes.telecomcrm.subscription.repository.SubscriptionRepository;
@@ -109,6 +111,13 @@ class TicketServiceTest {
 	}
 
 	@Test
+	void createTicket_whenUserIsNotAuthenticatedThrowsUnauthorizedException() {
+		TicketRequest request = new TicketRequest("Internet drops", "Connection drops every morning.", TicketPriority.HIGH);
+
+		assertThrows(UnauthorizedException.class, () -> ticketService.createTicket(request));
+	}
+
+	@Test
 	void getAllTickets_returnsMappedResponses() {
 		List<Ticket> tickets = List.of(ticket(10L, user(1L, Role.ROLE_USER), null, TicketStatus.OPEN));
 		List<TicketResponse> responses = List.of(response(10L, "OPEN"));
@@ -129,6 +138,11 @@ class TicketServiceTest {
 		when(ticketMapper.toResponseList(tickets)).thenReturn(responses);
 
 		assertEquals(responses, ticketService.getMyTickets());
+	}
+
+	@Test
+	void getMyTickets_whenUserIsNotAuthenticatedThrowsUnauthorizedException() {
+		assertThrows(UnauthorizedException.class, ticketService::getMyTickets);
 	}
 
 	@Test
@@ -171,6 +185,24 @@ class TicketServiceTest {
 	}
 
 	@Test
+	void assignTicket_whenAgentIsAdminAssignsTicketAndMovesToInProgress() {
+		User customer = user(1L, Role.ROLE_USER);
+		User admin = user(3L, Role.ROLE_ADMIN);
+		Ticket ticket = ticket(10L, customer, null, TicketStatus.OPEN);
+		TicketResponse response = response(10L, "IN_PROGRESS");
+
+		when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+		when(entityManager.find(User.class, 3L)).thenReturn(admin);
+		when(ticketRepository.save(any(Ticket.class))).thenAnswer(invocation -> invocation.getArgument(0));
+		when(ticketMapper.toResponse(any(Ticket.class))).thenReturn(response);
+
+		assertEquals(response, ticketService.assignTicket(10L, new TicketAssignRequest(3L)));
+		assertEquals(admin, ticket.getAssignedAgent());
+		assertEquals(TicketStatus.IN_PROGRESS, ticket.getStatus());
+		verify(ticketSearchIndexService).index(ticket);
+	}
+
+	@Test
 	void assignTicket_whenTicketNotOpenThrowsBusinessRuleException() {
 		Ticket ticket = ticket(10L, user(1L, Role.ROLE_USER), null, TicketStatus.IN_PROGRESS);
 		when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
@@ -194,6 +226,16 @@ class TicketServiceTest {
 	}
 
 	@Test
+	void assignTicket_whenAgentDoesNotExistThrowsUserNotFoundException() {
+		Ticket ticket = ticket(10L, user(1L, Role.ROLE_USER), null, TicketStatus.OPEN);
+
+		when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+		when(entityManager.find(User.class, 2L)).thenReturn(null);
+
+		assertThrows(UserNotFoundException.class, () -> ticketService.assignTicket(10L, new TicketAssignRequest(2L)));
+	}
+
+	@Test
 	void resolveTicket_whenNotClosedMovesToResolvedAndPublishesEvent() {
 		User customer = user(1L, Role.ROLE_USER);
 		User agent = user(2L, Role.ROLE_SUPPORT_AGENT);
@@ -208,6 +250,20 @@ class TicketServiceTest {
 		assertEquals(TicketStatus.RESOLVED, ticket.getStatus());
 		verify(ticketSearchIndexService).index(ticket);
 		verify(ticketEventProducer).publishTicketResolved(eq(ticket), anyLong());
+	}
+
+	@Test
+	void resolveTicket_whenAlreadyResolvedReturnsResponseWithoutSavingOrPublishingAgain() {
+		Ticket ticket = ticket(10L, user(1L, Role.ROLE_USER), user(2L, Role.ROLE_SUPPORT_AGENT), TicketStatus.RESOLVED);
+		TicketResponse response = response(10L, "RESOLVED");
+
+		when(ticketRepository.findById(10L)).thenReturn(Optional.of(ticket));
+		when(ticketMapper.toResponse(ticket)).thenReturn(response);
+
+		assertEquals(response, ticketService.resolveTicket(10L));
+		verify(ticketRepository, never()).save(any(Ticket.class));
+		verify(ticketSearchIndexService, never()).index(any(Ticket.class));
+		verify(ticketEventProducer, never()).publishTicketResolved(any(Ticket.class), anyLong());
 	}
 
 	@Test

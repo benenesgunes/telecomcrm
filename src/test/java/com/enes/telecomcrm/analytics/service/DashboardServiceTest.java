@@ -20,6 +20,7 @@ import com.enes.telecomcrm.analytics.dto.AgentDashboardResponse;
 import com.enes.telecomcrm.analytics.dto.SubscriptionDashboardResponse;
 import com.enes.telecomcrm.analytics.dto.TicketDashboardResponse;
 import com.enes.telecomcrm.auth.security.UserPrincipal;
+import com.enes.telecomcrm.common.exception.UnauthorizedException;
 import com.enes.telecomcrm.subscription.entity.SubscriptionStatus;
 import com.enes.telecomcrm.subscription.repository.PlanRepository;
 import com.enes.telecomcrm.subscription.repository.SubscriptionRepository;
@@ -160,6 +161,11 @@ class DashboardServiceTest {
 		when(userRepository.findById(2L)).thenReturn(Optional.empty());
 
 		assertThrows(UserNotFoundException.class, dashboardService::getAgentMetrics);
+	}
+
+	@Test
+	void getAgentMetrics_whenUserIsNotAuthenticatedThrowsUnauthorizedException() {
+		assertThrows(UnauthorizedException.class, dashboardService::getAgentMetrics);
 	}
 
 	private void authenticate(Long id, Role role) {

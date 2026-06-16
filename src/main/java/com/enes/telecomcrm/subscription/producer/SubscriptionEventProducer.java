@@ -13,16 +13,22 @@ public class SubscriptionEventProducer {
 
 	private final KafkaTemplate<String, Object> kafkaTemplate;
 	private final String subscriptionActivatedTopic;
+	private final boolean kafkaEnabled;
 
 	public SubscriptionEventProducer(
 			KafkaTemplate<String, Object> kafkaTemplate,
-			@Value("${app.kafka.topics.subscription-activated:subscription-activated}") String subscriptionActivatedTopic
+			@Value("${app.kafka.topics.subscription-activated:subscription-activated}") String subscriptionActivatedTopic,
+			@Value("${app.kafka.enabled:false}") boolean kafkaEnabled
 	) {
 		this.kafkaTemplate = kafkaTemplate;
 		this.subscriptionActivatedTopic = subscriptionActivatedTopic;
+		this.kafkaEnabled = kafkaEnabled;
 	}
 
 	public void publishSubscriptionActivated(Subscription subscription) {
+		if (!kafkaEnabled) {
+			return;
+		}
 		SubscriptionActivatedPayload payload = new SubscriptionActivatedPayload(
 				subscription.getId(),
 				subscription.getUser().getId(),
