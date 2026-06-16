@@ -73,6 +73,28 @@ class AuthorizationServiceTest {
 		verifyNoInteractions(ticketRepository);
 	}
 
+	@Test
+	void canAccessTicketComments_allowsOwnerAssignedAgentAndAdminOnly() {
+		authenticate(1L, Role.ROLE_USER);
+		when(ticketRepository.existsByIdAndCustomerId(10L, 1L)).thenReturn(true);
+		when(ticketRepository.existsByIdAndCustomerId(20L, 1L)).thenReturn(false);
+
+		assertTrue(authorizationService.canAccessTicketComments(10L));
+		assertFalse(authorizationService.canAccessTicketComments(20L));
+
+		authenticate(2L, Role.ROLE_SUPPORT_AGENT);
+		when(ticketRepository.existsByIdAndCustomerId(30L, 2L)).thenReturn(false);
+		when(ticketRepository.existsByIdAndAssignedAgentId(30L, 2L)).thenReturn(true);
+		when(ticketRepository.existsByIdAndCustomerId(40L, 2L)).thenReturn(false);
+		when(ticketRepository.existsByIdAndAssignedAgentId(40L, 2L)).thenReturn(false);
+
+		assertTrue(authorizationService.canAccessTicketComments(30L));
+		assertFalse(authorizationService.canAccessTicketComments(40L));
+
+		authenticate(3L, Role.ROLE_ADMIN);
+		assertTrue(authorizationService.canAccessTicketComments(99L));
+	}
+
 	private void authenticate(Long id, Role role) {
 		UserPrincipal principal = new UserPrincipal(id, "user%d@example.com".formatted(id), "password", role);
 		UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(

@@ -17,6 +17,8 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.enes.telecomcrm.subscription.service.PlanService;
 import com.enes.telecomcrm.subscription.service.SubscriptionService;
+import com.enes.telecomcrm.ticket.repository.TicketRepository;
+import com.enes.telecomcrm.ticket.service.TicketCommentService;
 import com.enes.telecomcrm.ticket.service.TicketService;
 import com.enes.telecomcrm.user.entity.Role;
 import com.enes.telecomcrm.user.service.UserService;
@@ -67,6 +69,12 @@ class SecurityAuthorizationTest {
 
 	@MockitoBean
 	private TicketService ticketService;
+
+	@MockitoBean
+	private TicketCommentService ticketCommentService;
+
+	@MockitoBean
+	private TicketRepository ticketRepository;
 
 	@Test
 	void protectedEndpointWithoutAuthenticationReturnsUnauthorized() throws Exception {
@@ -220,8 +228,10 @@ class SecurityAuthorizationTest {
 	}
 
 	@Test
-	@WithMockUser(roles = "SUPPORT_AGENT")
+	@WithTelecomUser(id = 2, role = Role.ROLE_SUPPORT_AGENT)
 	void supportAgentCanViewAgentDashboardAndAddComments() throws Exception {
+		org.mockito.Mockito.when(ticketRepository.existsByIdAndAssignedAgentId(1L, 2L)).thenReturn(true);
+
 		mockMvc.perform(get("/api/v1/dashboard/agent"))
 				.andExpect(status().isOk());
 
@@ -229,5 +239,16 @@ class SecurityAuthorizationTest {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content("{\"message\":\"Looking into this.\"}"))
 				.andExpect(status().isOk());
+	}
+
+	@Test
+	@WithTelecomUser(id = 2, role = Role.ROLE_SUPPORT_AGENT)
+	void supportAgentCannotCommentOnUnassignedTicket() throws Exception {
+		org.mockito.Mockito.when(ticketRepository.existsByIdAndAssignedAgentId(1L, 2L)).thenReturn(false);
+
+		mockMvc.perform(post("/api/v1/tickets/1/comments")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("{\"message\":\"Looking into this.\"}"))
+				.andExpect(status().isForbidden());
 	}
 }

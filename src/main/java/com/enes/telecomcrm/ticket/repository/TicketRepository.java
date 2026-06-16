@@ -28,6 +28,8 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
 
 	boolean existsByIdAndCustomerId(Long id, Long customerId);
 
+	boolean existsByIdAndAssignedAgentId(Long id, Long assignedAgentId);
+
 	@Query("""
 			select t.status as status,
 			       count(t.id) as ticketCount

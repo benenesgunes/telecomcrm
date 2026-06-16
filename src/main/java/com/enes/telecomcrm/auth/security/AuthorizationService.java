@@ -54,7 +54,22 @@ public class AuthorizationService {
 	}
 
 	public boolean canAccessTicketComments(Long ticketId) {
-		return canAccessTicket(ticketId);
+		Authentication authentication = currentAuthentication();
+		if (hasAuthority(authentication, ROLE_ADMIN)) {
+			return true;
+		}
+
+		Long currentUserId = currentUserId(authentication);
+		if (currentUserId == null) {
+			return false;
+		}
+
+		if (ticketRepository.existsByIdAndCustomerId(ticketId, currentUserId)) {
+			return true;
+		}
+
+		return hasAuthority(authentication, ROLE_SUPPORT_AGENT)
+				&& ticketRepository.existsByIdAndAssignedAgentId(ticketId, currentUserId);
 	}
 
 	private Authentication currentAuthentication() {
