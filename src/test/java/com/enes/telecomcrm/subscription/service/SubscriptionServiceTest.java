@@ -27,6 +27,7 @@ import com.enes.telecomcrm.subscription.entity.SubscriptionStatus;
 import com.enes.telecomcrm.subscription.exception.PlanNotFoundException;
 import com.enes.telecomcrm.subscription.exception.SubscriptionNotFoundException;
 import com.enes.telecomcrm.subscription.mapper.SubscriptionMapper;
+import com.enes.telecomcrm.subscription.producer.SubscriptionEventProducer;
 import com.enes.telecomcrm.subscription.repository.PlanRepository;
 import com.enes.telecomcrm.subscription.repository.SubscriptionRepository;
 import com.enes.telecomcrm.user.dto.UserResponse;
@@ -42,11 +43,13 @@ class SubscriptionServiceTest {
 	private final PlanRepository planRepository = mock(PlanRepository.class);
 	private final SubscriptionMapper subscriptionMapper = mock(SubscriptionMapper.class);
 	private final EntityManager entityManager = mock(EntityManager.class);
+	private final SubscriptionEventProducer subscriptionEventProducer = mock(SubscriptionEventProducer.class);
 	private final SubscriptionService subscriptionService = new SubscriptionService(
 			subscriptionRepository,
 			planRepository,
 			subscriptionMapper,
-			entityManager
+			entityManager,
+			subscriptionEventProducer
 	);
 
 	@Test
@@ -70,6 +73,7 @@ class SubscriptionServiceTest {
 		assertEquals(plan, mappedSubscription.getPlan());
 		assertEquals(SubscriptionStatus.ACTIVE, mappedSubscription.getStatus());
 		assertNull(mappedSubscription.getEndDate());
+		verify(subscriptionEventProducer).publishSubscriptionActivated(savedSubscription);
 	}
 
 	@Test

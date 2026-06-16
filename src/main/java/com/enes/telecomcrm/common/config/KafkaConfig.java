@@ -3,17 +3,27 @@ package com.enes.telecomcrm.common.config;
 import java.util.HashMap;
 import java.util.Map;
 
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.producer.ProducerConfig;
+import org.apache.kafka.common.serialization.StringDeserializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.kafka.annotation.EnableKafka;
+import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.kafka.core.ConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
+import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.kafka.core.ProducerFactory;
+import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.kafka.support.serializer.JsonDeserializer;
 import org.springframework.kafka.support.serializer.JsonSerializer;
+import org.springframework.util.backoff.FixedBackOff;
 
 @Configuration
+@EnableKafka
 public class KafkaConfig {
 
 	@Bean
@@ -30,5 +40,34 @@ public class KafkaConfig {
 	@Bean
 	public KafkaTemplate<String, Object> kafkaTemplate(ProducerFactory<String, Object> producerFactory) {
 		return new KafkaTemplate<>(producerFactory);
+	}
+
+	@Bean
+	public ConsumerFactory<String, Object> consumerFactory(
+			@Value("${spring.kafka.bootstrap-servers:localhost:9092}") String bootstrapServers,
+			@Value("${spring.kafka.consumer.group-id:telecom-crm-group}") String groupId,
+			@Value("${spring.kafka.consumer.properties.spring.json.trusted.packages:com.enes.telecomcrm.*}") String trustedPackages
+	) {
+		Map<String, Object> config = new HashMap<>();
+		config.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
+		config.put(ConsumerConfig.GROUP_ID_CONFIG, groupId);
+		config.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+		config.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
+		config.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
+		config.put(JsonDeserializer.TRUSTED_PACKAGES, trustedPackages);
+		return new DefaultKafkaConsumerFactory<>(config);
+	}
+
+	@Bean
+	public ConcurrentKafkaListenerContainerFactory<String, Object> kafkaListenerContainerFactory(
+			ConsumerFactory<String, Object> consumerFactory,
+			@Value("${spring.kafka.listener.auto-startup:true}") boolean autoStartup
+	) {
+		ConcurrentKafkaListenerContainerFactory<String, Object> factory =
+				new ConcurrentKafkaListenerContainerFactory<>();
+		factory.setConsumerFactory(consumerFactory);
+		factory.setAutoStartup(autoStartup);
+		factory.setCommonErrorHandler(new DefaultErrorHandler(new FixedBackOff(1000L, 3L)));
+		return factory;
 	}
 }

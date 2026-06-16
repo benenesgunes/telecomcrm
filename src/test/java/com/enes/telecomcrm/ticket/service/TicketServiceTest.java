@@ -4,6 +4,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -16,7 +17,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
@@ -30,9 +30,9 @@ import com.enes.telecomcrm.ticket.dto.TicketResponse;
 import com.enes.telecomcrm.ticket.entity.Ticket;
 import com.enes.telecomcrm.ticket.entity.TicketPriority;
 import com.enes.telecomcrm.ticket.entity.TicketStatus;
-import com.enes.telecomcrm.ticket.event.BaseEvent;
 import com.enes.telecomcrm.ticket.exception.TicketNotFoundException;
 import com.enes.telecomcrm.ticket.mapper.TicketMapper;
+import com.enes.telecomcrm.ticket.producer.TicketEventProducer;
 import com.enes.telecomcrm.ticket.repository.TicketRepository;
 import com.enes.telecomcrm.user.dto.UserResponse;
 import com.enes.telecomcrm.user.entity.Role;
@@ -47,15 +47,13 @@ class TicketServiceTest {
 	private final SubscriptionRepository subscriptionRepository = mock(SubscriptionRepository.class);
 	private final TicketMapper ticketMapper = mock(TicketMapper.class);
 	private final EntityManager entityManager = mock(EntityManager.class);
-	private final KafkaTemplate<String, Object> kafkaTemplate = mock(KafkaTemplate.class);
+	private final TicketEventProducer ticketEventProducer = mock(TicketEventProducer.class);
 	private final TicketService ticketService = new TicketService(
 			ticketRepository,
 			subscriptionRepository,
 			ticketMapper,
 			entityManager,
-			kafkaTemplate,
-			"ticket-created",
-			"ticket-resolved"
+			ticketEventProducer
 	);
 
 	@AfterEach
@@ -82,7 +80,7 @@ class TicketServiceTest {
 		assertEquals(customer, mappedTicket.getCustomer());
 		assertNull(mappedTicket.getAssignedAgent());
 		assertEquals(TicketStatus.OPEN, mappedTicket.getStatus());
-		verify(kafkaTemplate).send(eq("ticket-created"), eq("10"), any(BaseEvent.class));
+		verify(ticketEventProducer).publishTicketCreated(savedTicket);
 	}
 
 	@Test
@@ -203,7 +201,7 @@ class TicketServiceTest {
 
 		assertEquals(response, ticketService.resolveTicket(10L));
 		assertEquals(TicketStatus.RESOLVED, ticket.getStatus());
-		verify(kafkaTemplate).send(eq("ticket-resolved"), eq("10"), any(BaseEvent.class));
+		verify(ticketEventProducer).publishTicketResolved(eq(ticket), anyLong());
 	}
 
 	@Test

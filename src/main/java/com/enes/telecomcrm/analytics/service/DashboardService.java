@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.cache.annotation.Cacheable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,7 @@ import com.enes.telecomcrm.subscription.repository.PlanRepository;
 import com.enes.telecomcrm.subscription.repository.SubscriptionRepository;
 import com.enes.telecomcrm.ticket.entity.TicketPriority;
 import com.enes.telecomcrm.ticket.entity.TicketStatus;
+import com.enes.telecomcrm.ticket.event.TicketResolvedEvent;
 import com.enes.telecomcrm.ticket.repository.TicketRepository;
 import com.enes.telecomcrm.user.entity.User;
 import com.enes.telecomcrm.user.exception.UserNotFoundException;
@@ -30,6 +33,7 @@ import com.enes.telecomcrm.user.repository.UserRepository;
 @Service
 public class DashboardService {
 
+	private static final Logger log = LoggerFactory.getLogger(DashboardService.class);
 	private static final int MONTHLY_GROWTH_MONTHS = 12;
 
 	private final UserRepository userRepository;
@@ -98,6 +102,14 @@ public class DashboardService {
 				ticketRepository.countByAssignedAgentId(agentId),
 				ticketRepository.countByAssignedAgentIdAndStatus(agentId, TicketStatus.RESOLVED),
 				ticketRepository.averageResolutionTimeHoursByAssignedAgentId(agentId)
+		);
+	}
+
+	public void processTicketResolvedEvent(TicketResolvedEvent event) {
+		log.info(
+				"Analytics processed TicketResolvedEvent for ticketId={}, resolutionTimeMinutes={}",
+				event.payload().ticketId(),
+				event.payload().resolutionTimeMinutes()
 		);
 	}
 

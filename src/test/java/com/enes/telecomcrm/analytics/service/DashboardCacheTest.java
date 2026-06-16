@@ -21,7 +21,6 @@ import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
@@ -34,6 +33,7 @@ import com.enes.telecomcrm.subscription.entity.PlanType;
 import com.enes.telecomcrm.subscription.entity.Subscription;
 import com.enes.telecomcrm.subscription.entity.SubscriptionStatus;
 import com.enes.telecomcrm.subscription.mapper.SubscriptionMapper;
+import com.enes.telecomcrm.subscription.producer.SubscriptionEventProducer;
 import com.enes.telecomcrm.subscription.repository.PlanRepository;
 import com.enes.telecomcrm.subscription.repository.SubscriptionRepository;
 import com.enes.telecomcrm.subscription.service.SubscriptionService;
@@ -44,6 +44,7 @@ import com.enes.telecomcrm.ticket.entity.Ticket;
 import com.enes.telecomcrm.ticket.entity.TicketPriority;
 import com.enes.telecomcrm.ticket.entity.TicketStatus;
 import com.enes.telecomcrm.ticket.mapper.TicketMapper;
+import com.enes.telecomcrm.ticket.producer.TicketEventProducer;
 import com.enes.telecomcrm.ticket.repository.TicketRepository;
 import com.enes.telecomcrm.ticket.service.TicketService;
 import com.enes.telecomcrm.user.dto.UserResponse;
@@ -374,8 +375,13 @@ class DashboardCacheTest {
 		}
 
 		@Bean
-		KafkaTemplate<String, Object> kafkaTemplate() {
-			return mock(KafkaTemplate.class);
+		TicketEventProducer ticketEventProducer() {
+			return mock(TicketEventProducer.class);
+		}
+
+		@Bean
+		SubscriptionEventProducer subscriptionEventProducer() {
+			return mock(SubscriptionEventProducer.class);
 		}
 
 		@Bean
@@ -394,16 +400,14 @@ class DashboardCacheTest {
 				SubscriptionRepository subscriptionRepository,
 				TicketMapper ticketMapper,
 				EntityManager entityManager,
-				KafkaTemplate<String, Object> kafkaTemplate
+				TicketEventProducer ticketEventProducer
 		) {
 			return new TicketService(
 					ticketRepository,
 					subscriptionRepository,
 					ticketMapper,
 					entityManager,
-					kafkaTemplate,
-					"ticket-created",
-					"ticket-resolved"
+					ticketEventProducer
 			);
 		}
 
@@ -412,9 +416,16 @@ class DashboardCacheTest {
 				SubscriptionRepository subscriptionRepository,
 				PlanRepository planRepository,
 				SubscriptionMapper subscriptionMapper,
-				EntityManager entityManager
+				EntityManager entityManager,
+				SubscriptionEventProducer subscriptionEventProducer
 		) {
-			return new SubscriptionService(subscriptionRepository, planRepository, subscriptionMapper, entityManager);
+			return new SubscriptionService(
+					subscriptionRepository,
+					planRepository,
+					subscriptionMapper,
+					entityManager,
+					subscriptionEventProducer
+			);
 		}
 	}
 }

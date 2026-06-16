@@ -4,10 +4,8 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Caching;
-import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,11 +19,9 @@ import com.enes.telecomcrm.ticket.dto.TicketRequest;
 import com.enes.telecomcrm.ticket.dto.TicketResponse;
 import com.enes.telecomcrm.ticket.entity.Ticket;
 import com.enes.telecomcrm.ticket.entity.TicketStatus;
-import com.enes.telecomcrm.ticket.event.BaseEvent;
-import com.enes.telecomcrm.ticket.event.TicketCreatedPayload;
-import com.enes.telecomcrm.ticket.event.TicketResolvedPayload;
 import com.enes.telecomcrm.ticket.exception.TicketNotFoundException;
 import com.enes.telecomcrm.ticket.mapper.TicketMapper;
+import com.enes.telecomcrm.ticket.producer.TicketEventProducer;
 import com.enes.telecomcrm.ticket.repository.TicketRepository;
 import com.enes.telecomcrm.user.entity.Role;
 import com.enes.telecomcrm.user.entity.User;
@@ -40,26 +36,20 @@ public class TicketService {
 	private final SubscriptionRepository subscriptionRepository;
 	private final TicketMapper ticketMapper;
 	private final EntityManager entityManager;
-	private final KafkaTemplate<String, Object> kafkaTemplate;
-	private final String ticketCreatedTopic;
-	private final String ticketResolvedTopic;
+	private final TicketEventProducer ticketEventProducer;
 
 	public TicketService(
 			TicketRepository ticketRepository,
 			SubscriptionRepository subscriptionRepository,
 			TicketMapper ticketMapper,
 			EntityManager entityManager,
-			KafkaTemplate<String, Object> kafkaTemplate,
-			@Value("${app.kafka.topics.ticket-created:ticket-created}") String ticketCreatedTopic,
-			@Value("${app.kafka.topics.ticket-resolved:ticket-resolved}") String ticketResolvedTopic
+			TicketEventProducer ticketEventProducer
 	) {
 		this.ticketRepository = ticketRepository;
 		this.subscriptionRepository = subscriptionRepository;
 		this.ticketMapper = ticketMapper;
 		this.entityManager = entityManager;
-		this.kafkaTemplate = kafkaTemplate;
-		this.ticketCreatedTopic = ticketCreatedTopic;
-		this.ticketResolvedTopic = ticketResolvedTopic;
+		this.ticketEventProducer = ticketEventProducer;
 	}
 
 	@Transactional
@@ -78,7 +68,7 @@ public class TicketService {
 		ticket.setStatus(TicketStatus.OPEN);
 
 		Ticket savedTicket = ticketRepository.save(ticket);
-		publishTicketCreated(savedTicket);
+		ticketEventProducer.publishTicketCreated(savedTicket);
 		return ticketMapper.toResponse(savedTicket);
 	}
 
@@ -138,7 +128,7 @@ public class TicketService {
 		ticket.setStatus(TicketStatus.RESOLVED);
 
 		Ticket savedTicket = ticketRepository.save(ticket);
-		publishTicketResolved(savedTicket);
+		ticketEventProducer.publishTicketResolved(savedTicket, resolutionTimeMinutes(savedTicket));
 		return ticketMapper.toResponse(savedTicket);
 	}
 
@@ -181,28 +171,6 @@ public class TicketService {
 	private Long currentUserId() {
 		return SecurityUtils.getCurrentUserId()
 				.orElseThrow(() -> new UnauthorizedException("Authenticated user is required"));
-	}
-
-	private void publishTicketCreated(Ticket ticket) {
-		TicketCreatedPayload payload = new TicketCreatedPayload(
-				ticket.getId(),
-				ticket.getTitle(),
-				ticket.getPriority().name(),
-				ticket.getCustomer().getId(),
-				ticket.getCustomer().getEmail()
-		);
-		kafkaTemplate.send(ticketCreatedTopic, String.valueOf(ticket.getId()), BaseEvent.of("TICKET_CREATED", payload));
-	}
-
-	private void publishTicketResolved(Ticket ticket) {
-		TicketResolvedPayload payload = new TicketResolvedPayload(
-				ticket.getId(),
-				ticket.getAssignedAgent() == null ? null : ticket.getAssignedAgent().getId(),
-				resolutionTimeMinutes(ticket),
-				ticket.getCustomer().getId(),
-				ticket.getCustomer().getEmail()
-		);
-		kafkaTemplate.send(ticketResolvedTopic, String.valueOf(ticket.getId()), BaseEvent.of("TICKET_RESOLVED", payload));
 	}
 
 	private long resolutionTimeMinutes(Ticket ticket) {

@@ -16,6 +16,7 @@ import com.enes.telecomcrm.subscription.entity.SubscriptionStatus;
 import com.enes.telecomcrm.subscription.exception.PlanNotFoundException;
 import com.enes.telecomcrm.subscription.exception.SubscriptionNotFoundException;
 import com.enes.telecomcrm.subscription.mapper.SubscriptionMapper;
+import com.enes.telecomcrm.subscription.producer.SubscriptionEventProducer;
 import com.enes.telecomcrm.subscription.repository.PlanRepository;
 import com.enes.telecomcrm.subscription.repository.SubscriptionRepository;
 import com.enes.telecomcrm.user.entity.User;
@@ -30,17 +31,20 @@ public class SubscriptionService {
 	private final PlanRepository planRepository;
 	private final SubscriptionMapper subscriptionMapper;
 	private final EntityManager entityManager;
+	private final SubscriptionEventProducer subscriptionEventProducer;
 
 	public SubscriptionService(
 			SubscriptionRepository subscriptionRepository,
 			PlanRepository planRepository,
 			SubscriptionMapper subscriptionMapper,
-			EntityManager entityManager
+			EntityManager entityManager,
+			SubscriptionEventProducer subscriptionEventProducer
 	) {
 		this.subscriptionRepository = subscriptionRepository;
 		this.planRepository = planRepository;
 		this.subscriptionMapper = subscriptionMapper;
 		this.entityManager = entityManager;
+		this.subscriptionEventProducer = subscriptionEventProducer;
 	}
 
 	@Transactional
@@ -63,7 +67,9 @@ public class SubscriptionService {
 		subscription.setStatus(SubscriptionStatus.ACTIVE);
 		subscription.setEndDate(null);
 
-		return subscriptionMapper.toResponse(subscriptionRepository.save(subscription));
+		Subscription savedSubscription = subscriptionRepository.save(subscription);
+		subscriptionEventProducer.publishSubscriptionActivated(savedSubscription);
+		return subscriptionMapper.toResponse(savedSubscription);
 	}
 
 	@Transactional(readOnly = true)
