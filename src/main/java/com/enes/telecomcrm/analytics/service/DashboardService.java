@@ -6,6 +6,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,11 +14,13 @@ import com.enes.telecomcrm.analytics.dto.AdminDashboardResponse;
 import com.enes.telecomcrm.analytics.dto.AgentDashboardResponse;
 import com.enes.telecomcrm.analytics.dto.PlanPopularityDTO;
 import com.enes.telecomcrm.analytics.dto.SubscriptionDashboardResponse;
+import com.enes.telecomcrm.analytics.dto.TicketDashboardResponse;
 import com.enes.telecomcrm.common.exception.UnauthorizedException;
 import com.enes.telecomcrm.common.util.SecurityUtils;
 import com.enes.telecomcrm.subscription.entity.SubscriptionStatus;
 import com.enes.telecomcrm.subscription.repository.PlanRepository;
 import com.enes.telecomcrm.subscription.repository.SubscriptionRepository;
+import com.enes.telecomcrm.ticket.entity.TicketPriority;
 import com.enes.telecomcrm.ticket.entity.TicketStatus;
 import com.enes.telecomcrm.ticket.repository.TicketRepository;
 import com.enes.telecomcrm.user.entity.User;
@@ -47,6 +50,7 @@ public class DashboardService {
 	}
 
 	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = "dashboard:admin", unless = "#result == null")
 	public AdminDashboardResponse getAdminMetrics() {
 		return new AdminDashboardResponse(
 				userRepository.count(),
@@ -58,6 +62,7 @@ public class DashboardService {
 	}
 
 	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = "dashboard:subscriptions", unless = "#result == null")
 	public SubscriptionDashboardResponse getSubscriptionMetrics() {
 		return new SubscriptionDashboardResponse(
 				mostPopularPlans(),
@@ -67,6 +72,20 @@ public class DashboardService {
 	}
 
 	@Transactional(readOnly = true)
+	@Cacheable(cacheNames = "dashboard:tickets", unless = "#result == null")
+	public TicketDashboardResponse getTicketMetrics() {
+		return new TicketDashboardResponse(
+				ticketStatusDistribution(),
+				ticketPriorityDistribution()
+		);
+	}
+
+	@Transactional(readOnly = true)
+	@Cacheable(
+			cacheNames = "dashboard:agent",
+			key = "T(com.enes.telecomcrm.common.util.SecurityUtils).getCurrentUserId().orElse(null)",
+			unless = "#result == null"
+	)
 	public AgentDashboardResponse getAgentMetrics() {
 		Long agentId = SecurityUtils.getCurrentUserId()
 				.orElseThrow(() -> new UnauthorizedException("Authenticated user is required"));
@@ -118,6 +137,34 @@ public class DashboardService {
 				.forEach(status -> distribution.put(
 						status.getStatus().name(),
 						status.getSubscriptionCount()
+				));
+
+		return distribution;
+	}
+
+	private Map<String, Long> ticketStatusDistribution() {
+		Map<String, Long> distribution = new LinkedHashMap<>();
+		Arrays.stream(TicketStatus.values())
+				.forEach(status -> distribution.put(status.name(), 0L));
+
+		ticketRepository.countByStatusDistribution()
+				.forEach(status -> distribution.put(
+						status.getStatus().name(),
+						status.getTicketCount()
+				));
+
+		return distribution;
+	}
+
+	private Map<String, Long> ticketPriorityDistribution() {
+		Map<String, Long> distribution = new LinkedHashMap<>();
+		Arrays.stream(TicketPriority.values())
+				.forEach(priority -> distribution.put(priority.name(), 0L));
+
+		ticketRepository.countByPriorityDistribution()
+				.forEach(priority -> distribution.put(
+						priority.getPriority().name(),
+						priority.getTicketCount()
 				));
 
 		return distribution;

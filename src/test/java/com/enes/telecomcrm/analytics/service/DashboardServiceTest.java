@@ -18,10 +18,12 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import com.enes.telecomcrm.analytics.dto.AdminDashboardResponse;
 import com.enes.telecomcrm.analytics.dto.AgentDashboardResponse;
 import com.enes.telecomcrm.analytics.dto.SubscriptionDashboardResponse;
+import com.enes.telecomcrm.analytics.dto.TicketDashboardResponse;
 import com.enes.telecomcrm.auth.security.UserPrincipal;
 import com.enes.telecomcrm.subscription.entity.SubscriptionStatus;
 import com.enes.telecomcrm.subscription.repository.PlanRepository;
 import com.enes.telecomcrm.subscription.repository.SubscriptionRepository;
+import com.enes.telecomcrm.ticket.entity.TicketPriority;
 import com.enes.telecomcrm.ticket.entity.TicketStatus;
 import com.enes.telecomcrm.ticket.repository.TicketRepository;
 import com.enes.telecomcrm.user.entity.Role;
@@ -100,6 +102,32 @@ class DashboardServiceTest {
 				"CANCELLED", 2L,
 				"EXPIRED", 0L
 		), response.statusDistribution());
+	}
+
+	@Test
+	void getTicketMetrics_returnsStatusAndPriorityDistribution() {
+		when(ticketRepository.countByStatusDistribution()).thenReturn(List.of(
+				new TicketStatusCountViewStub(TicketStatus.OPEN, 7L),
+				new TicketStatusCountViewStub(TicketStatus.RESOLVED, 11L)
+		));
+		when(ticketRepository.countByPriorityDistribution()).thenReturn(List.of(
+				new TicketPriorityCountViewStub(TicketPriority.HIGH, 4L),
+				new TicketPriorityCountViewStub(TicketPriority.MEDIUM, 9L)
+		));
+
+		TicketDashboardResponse response = dashboardService.getTicketMetrics();
+
+		assertEquals(Map.of(
+				"OPEN", 7L,
+				"IN_PROGRESS", 0L,
+				"RESOLVED", 11L,
+				"CLOSED", 0L
+		), response.statusDistribution());
+		assertEquals(Map.of(
+				"LOW", 0L,
+				"MEDIUM", 9L,
+				"HIGH", 4L
+		), response.priorityDistribution());
 	}
 
 	@Test
@@ -201,6 +229,38 @@ class DashboardServiceTest {
 		@Override
 		public long getSubscriptionCount() {
 			return subscriptionCount;
+		}
+	}
+
+	private record TicketStatusCountViewStub(
+			TicketStatus status,
+			long ticketCount
+	) implements TicketRepository.TicketStatusCountView {
+
+		@Override
+		public TicketStatus getStatus() {
+			return status;
+		}
+
+		@Override
+		public long getTicketCount() {
+			return ticketCount;
+		}
+	}
+
+	private record TicketPriorityCountViewStub(
+			TicketPriority priority,
+			long ticketCount
+	) implements TicketRepository.TicketPriorityCountView {
+
+		@Override
+		public TicketPriority getPriority() {
+			return priority;
+		}
+
+		@Override
+		public long getTicketCount() {
+			return ticketCount;
 		}
 	}
 }

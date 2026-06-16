@@ -5,6 +5,8 @@ import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +63,7 @@ public class TicketService {
 	}
 
 	@Transactional
+	@CacheEvict(cacheNames = {"dashboard:admin", "dashboard:tickets"}, allEntries = true)
 	public TicketResponse createTicket(TicketRequest request) {
 		Long customerId = currentUserId();
 		User customer = findUserById(customerId);
@@ -95,6 +98,7 @@ public class TicketService {
 	}
 
 	@Transactional
+	@CacheEvict(cacheNames = "dashboard:agent", key = "#request.agentId()")
 	public TicketResponse assignTicket(Long id, TicketAssignRequest request) {
 		Ticket ticket = findTicketById(id);
 		ensureNotClosed(ticket);
@@ -115,6 +119,14 @@ public class TicketService {
 	}
 
 	@Transactional
+	@Caching(evict = {
+			@CacheEvict(cacheNames = {"dashboard:admin", "dashboard:tickets"}, allEntries = true),
+			@CacheEvict(
+					cacheNames = "dashboard:agent",
+					key = "#result.assignedAgent().id()",
+					condition = "#result.assignedAgent() != null"
+			)
+	})
 	public TicketResponse resolveTicket(Long id) {
 		Ticket ticket = findTicketById(id);
 		ensureNotClosed(ticket);
@@ -131,6 +143,14 @@ public class TicketService {
 	}
 
 	@Transactional
+	@Caching(evict = {
+			@CacheEvict(cacheNames = {"dashboard:admin", "dashboard:tickets"}, allEntries = true),
+			@CacheEvict(
+					cacheNames = "dashboard:agent",
+					key = "#result.assignedAgent().id()",
+					condition = "#result.assignedAgent() != null"
+			)
+	})
 	public TicketResponse closeTicket(Long id) {
 		Ticket ticket = findTicketById(id);
 		ensureNotClosed(ticket);

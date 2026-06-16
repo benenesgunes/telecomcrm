@@ -19,6 +19,7 @@ import com.enes.telecomcrm.analytics.dto.AdminDashboardResponse;
 import com.enes.telecomcrm.analytics.dto.AgentDashboardResponse;
 import com.enes.telecomcrm.analytics.dto.PlanPopularityDTO;
 import com.enes.telecomcrm.analytics.dto.SubscriptionDashboardResponse;
+import com.enes.telecomcrm.analytics.dto.TicketDashboardResponse;
 import com.enes.telecomcrm.analytics.service.DashboardService;
 import com.enes.telecomcrm.common.exception.GlobalExceptionHandler;
 
@@ -70,6 +71,22 @@ class DashboardControllerTest {
 				.andExpect(jsonPath("$.data.mostPopularPlans[0].activeSubscriberCount").value(15))
 				.andExpect(jsonPath("$['data']['monthlyGrowth']['2026-06']").value(5))
 				.andExpect(jsonPath("$.data.statusDistribution.ACTIVE").value(15));
+	}
+
+	@Test
+	void getTicketDashboard_returnsTicketMetrics() throws Exception {
+		when(dashboardService.getTicketMetrics()).thenReturn(new TicketDashboardResponse(
+				Map.of("OPEN", 7L, "RESOLVED", 11L),
+				Map.of("HIGH", 4L, "MEDIUM", 9L)
+		));
+
+		mockMvc.perform(get("/api/v1/dashboard/tickets"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.message").value("Ticket dashboard retrieved successfully"))
+				.andExpect(jsonPath("$.data.statusDistribution.OPEN").value(7))
+				.andExpect(jsonPath("$.data.statusDistribution.RESOLVED").value(11))
+				.andExpect(jsonPath("$.data.priorityDistribution.HIGH").value(4));
 	}
 
 	@Test

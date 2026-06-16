@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.enes.telecomcrm.analytics.dto.AdminDashboardResponse;
 import com.enes.telecomcrm.analytics.dto.AgentDashboardResponse;
 import com.enes.telecomcrm.analytics.dto.SubscriptionDashboardResponse;
+import com.enes.telecomcrm.analytics.dto.TicketDashboardResponse;
 import com.enes.telecomcrm.analytics.service.DashboardService;
 import com.enes.telecomcrm.common.dto.ApiResponse;
 
@@ -35,8 +36,8 @@ public class DashboardController {
 
 	@GetMapping("/tickets")
 	@PreAuthorize("hasRole('ADMIN')")
-	public ApiResponse<Void> getTicketDashboard() {
-		return ApiResponse.success("Ticket dashboard retrieved successfully", null);
+	public ApiResponse<TicketDashboardResponse> getTicketDashboard() {
+		return ApiResponse.success("Ticket dashboard retrieved successfully", dashboardService.getTicketMetrics());
 	}
 
 	@GetMapping("/agent")

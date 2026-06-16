@@ -3,6 +3,7 @@ package com.enes.telecomcrm.subscription.service;
 import java.time.LocalDate;
 import java.util.List;
 
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,6 +44,7 @@ public class SubscriptionService {
 	}
 
 	@Transactional
+	@CacheEvict(cacheNames = {"dashboard:admin", "dashboard:subscriptions", "plans:popular"}, allEntries = true)
 	public SubscriptionResponse createSubscription(SubscriptionRequest request) {
 		User user = findUserById(request.userId());
 		Plan plan = findPlanById(request.planId());
@@ -81,6 +83,7 @@ public class SubscriptionService {
 	}
 
 	@Transactional
+	@CacheEvict(cacheNames = {"dashboard:admin", "dashboard:subscriptions"}, allEntries = true)
 	public SubscriptionResponse suspendSubscription(Long id) {
 		Subscription subscription = findSubscriptionById(id);
 		transition(subscription, SubscriptionStatus.SUSPENDED);
@@ -88,6 +91,7 @@ public class SubscriptionService {
 	}
 
 	@Transactional
+	@CacheEvict(cacheNames = {"dashboard:admin", "dashboard:subscriptions"}, allEntries = true)
 	public SubscriptionResponse cancelSubscription(Long id) {
 		Subscription subscription = findSubscriptionById(id);
 		transition(subscription, SubscriptionStatus.CANCELLED);
@@ -95,6 +99,7 @@ public class SubscriptionService {
 	}
 
 	@Transactional
+	@CacheEvict(cacheNames = {"dashboard:admin", "dashboard:subscriptions"}, allEntries = true)
 	public SubscriptionResponse activateSubscription(Long id) {
 		Subscription subscription = findSubscriptionById(id);
 		transition(subscription, SubscriptionStatus.ACTIVE);
