@@ -1,5 +1,7 @@
 package com.enes.telecomcrm.ticket.controller;
 
+import java.util.List;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -12,6 +14,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.enes.telecomcrm.common.dto.ApiResponse;
 import com.enes.telecomcrm.ticket.dto.TicketAssignRequest;
 import com.enes.telecomcrm.ticket.dto.TicketRequest;
+import com.enes.telecomcrm.ticket.dto.TicketResponse;
+import com.enes.telecomcrm.ticket.service.TicketService;
 
 import jakarta.validation.Valid;
 
@@ -19,45 +23,51 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/tickets")
 public class TicketController {
 
+	private final TicketService ticketService;
+
+	public TicketController(TicketService ticketService) {
+		this.ticketService = ticketService;
+	}
+
 	@PostMapping
 	@PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-	public ApiResponse<Void> createTicket(@Valid @RequestBody TicketRequest request) {
-		return ApiResponse.success("Ticket created successfully", null);
+	public ApiResponse<TicketResponse> createTicket(@Valid @RequestBody TicketRequest request) {
+		return ApiResponse.success("Ticket created successfully", ticketService.createTicket(request));
 	}
 
 	@GetMapping
 	@PreAuthorize("hasAnyRole('SUPPORT_AGENT', 'ADMIN')")
-	public ApiResponse<Void> getAllTickets() {
-		return ApiResponse.success("Tickets retrieved successfully", null);
+	public ApiResponse<List<TicketResponse>> getAllTickets() {
+		return ApiResponse.success("Tickets retrieved successfully", ticketService.getAllTickets());
 	}
 
 	@GetMapping("/my")
 	@PreAuthorize("hasRole('USER')")
-	public ApiResponse<Void> getMyTickets() {
-		return ApiResponse.success("User tickets retrieved successfully", null);
+	public ApiResponse<List<TicketResponse>> getMyTickets() {
+		return ApiResponse.success("User tickets retrieved successfully", ticketService.getMyTickets());
 	}
 
 	@GetMapping("/{id}")
 	@PreAuthorize("@authorizationService.canAccessTicket(#id)")
-	public ApiResponse<Void> getTicketById(@PathVariable Long id) {
-		return ApiResponse.success("Ticket retrieved successfully", null);
+	public ApiResponse<TicketResponse> getTicketById(@PathVariable Long id) {
+		return ApiResponse.success("Ticket retrieved successfully", ticketService.getTicketById(id));
 	}
 
 	@PatchMapping("/{id}/assign")
 	@PreAuthorize("hasAnyRole('SUPPORT_AGENT', 'ADMIN')")
-	public ApiResponse<Void> assignTicket(@PathVariable Long id, @Valid @RequestBody TicketAssignRequest request) {
-		return ApiResponse.success("Ticket assigned successfully", null);
+	public ApiResponse<TicketResponse> assignTicket(@PathVariable Long id, @Valid @RequestBody TicketAssignRequest request) {
+		return ApiResponse.success("Ticket assigned successfully", ticketService.assignTicket(id, request));
 	}
 
 	@PatchMapping("/{id}/resolve")
 	@PreAuthorize("hasAnyRole('SUPPORT_AGENT', 'ADMIN')")
-	public ApiResponse<Void> resolveTicket(@PathVariable Long id) {
-		return ApiResponse.success("Ticket resolved successfully", null);
+	public ApiResponse<TicketResponse> resolveTicket(@PathVariable Long id) {
+		return ApiResponse.success("Ticket resolved successfully", ticketService.resolveTicket(id));
 	}
 
 	@PatchMapping("/{id}/close")
 	@PreAuthorize("hasRole('ADMIN')")
-	public ApiResponse<Void> closeTicket(@PathVariable Long id) {
-		return ApiResponse.success("Ticket closed successfully", null);
+	public ApiResponse<TicketResponse> closeTicket(@PathVariable Long id) {
+		return ApiResponse.success("Ticket closed successfully", ticketService.closeTicket(id));
 	}
 }

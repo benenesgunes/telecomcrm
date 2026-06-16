@@ -6,6 +6,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import com.enes.telecomcrm.auth.security.UserPrincipal;
+
 public final class SecurityUtils {
 
 	private SecurityUtils() {
@@ -19,6 +21,20 @@ public final class SecurityUtils {
 		}
 
 		return Optional.ofNullable(authentication.getName());
+	}
+
+	public static Optional<Long> getCurrentUserId() {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+		if (authentication == null || !authentication.isAuthenticated()) {
+			return Optional.empty();
+		}
+
+		if (authentication.getPrincipal() instanceof UserPrincipal userPrincipal) {
+			return Optional.ofNullable(userPrincipal.getId());
+		}
+
+		return Optional.empty();
 	}
 
 	public static boolean hasRole(String role) {

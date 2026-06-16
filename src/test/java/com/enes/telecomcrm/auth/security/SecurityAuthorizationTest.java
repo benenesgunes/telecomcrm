@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.enes.telecomcrm.subscription.service.PlanService;
 import com.enes.telecomcrm.subscription.service.SubscriptionService;
+import com.enes.telecomcrm.ticket.service.TicketService;
 import com.enes.telecomcrm.user.entity.Role;
 import com.enes.telecomcrm.user.service.UserService;
 
@@ -63,6 +64,9 @@ class SecurityAuthorizationTest {
 
 	@MockitoBean
 	private SubscriptionService subscriptionService;
+
+	@MockitoBean
+	private TicketService ticketService;
 
 	@Test
 	void protectedEndpointWithoutAuthenticationReturnsUnauthorized() throws Exception {
