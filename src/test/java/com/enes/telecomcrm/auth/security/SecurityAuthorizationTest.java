@@ -16,6 +16,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.enes.telecomcrm.analytics.service.DashboardService;
+import com.enes.telecomcrm.search.service.SearchService;
 import com.enes.telecomcrm.subscription.service.PlanService;
 import com.enes.telecomcrm.subscription.service.SubscriptionService;
 import com.enes.telecomcrm.ticket.repository.TicketRepository;
@@ -79,6 +80,9 @@ class SecurityAuthorizationTest {
 
 	@MockitoBean
 	private DashboardService dashboardService;
+
+	@MockitoBean
+	private SearchService searchService;
 
 	@Test
 	void protectedEndpointWithoutAuthenticationReturnsUnauthorized() throws Exception {
@@ -229,6 +233,36 @@ class SecurityAuthorizationTest {
 	void userCannotViewAdminDashboard() throws Exception {
 		mockMvc.perform(get("/api/v1/dashboard/admin"))
 				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	@WithMockUser(roles = "USER")
+	void userCannotSearchTicketsOrUsers() throws Exception {
+		mockMvc.perform(get("/api/v1/search/tickets").param("q", "internet"))
+				.andExpect(status().isForbidden());
+
+		mockMvc.perform(get("/api/v1/search/users").param("q", "john"))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	@WithMockUser(roles = "SUPPORT_AGENT")
+	void supportAgentCanSearchTicketsButCannotSearchUsers() throws Exception {
+		mockMvc.perform(get("/api/v1/search/tickets").param("q", "internet"))
+				.andExpect(status().isOk());
+
+		mockMvc.perform(get("/api/v1/search/users").param("q", "john"))
+				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	@WithMockUser(roles = "ADMIN")
+	void adminCanSearchTicketsAndUsers() throws Exception {
+		mockMvc.perform(get("/api/v1/search/tickets").param("q", "internet"))
+				.andExpect(status().isOk());
+
+		mockMvc.perform(get("/api/v1/search/users").param("q", "john"))
+				.andExpect(status().isOk());
 	}
 
 	@Test

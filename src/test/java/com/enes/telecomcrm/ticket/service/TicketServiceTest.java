@@ -22,6 +22,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 
 import com.enes.telecomcrm.auth.security.UserPrincipal;
 import com.enes.telecomcrm.common.exception.BusinessRuleException;
+import com.enes.telecomcrm.search.service.TicketSearchIndexService;
 import com.enes.telecomcrm.subscription.entity.SubscriptionStatus;
 import com.enes.telecomcrm.subscription.repository.SubscriptionRepository;
 import com.enes.telecomcrm.ticket.dto.TicketAssignRequest;
@@ -48,12 +49,14 @@ class TicketServiceTest {
 	private final TicketMapper ticketMapper = mock(TicketMapper.class);
 	private final EntityManager entityManager = mock(EntityManager.class);
 	private final TicketEventProducer ticketEventProducer = mock(TicketEventProducer.class);
+	private final TicketSearchIndexService ticketSearchIndexService = mock(TicketSearchIndexService.class);
 	private final TicketService ticketService = new TicketService(
 			ticketRepository,
 			subscriptionRepository,
 			ticketMapper,
 			entityManager,
-			ticketEventProducer
+			ticketEventProducer,
+			ticketSearchIndexService
 	);
 
 	@AfterEach
@@ -80,6 +83,7 @@ class TicketServiceTest {
 		assertEquals(customer, mappedTicket.getCustomer());
 		assertNull(mappedTicket.getAssignedAgent());
 		assertEquals(TicketStatus.OPEN, mappedTicket.getStatus());
+		verify(ticketSearchIndexService).index(savedTicket);
 		verify(ticketEventProducer).publishTicketCreated(savedTicket);
 	}
 
@@ -163,6 +167,7 @@ class TicketServiceTest {
 		verify(ticketRepository).save(ticketCaptor.capture());
 		assertEquals(agent, ticketCaptor.getValue().getAssignedAgent());
 		assertEquals(TicketStatus.IN_PROGRESS, ticketCaptor.getValue().getStatus());
+		verify(ticketSearchIndexService).index(ticket);
 	}
 
 	@Test
@@ -201,6 +206,7 @@ class TicketServiceTest {
 
 		assertEquals(response, ticketService.resolveTicket(10L));
 		assertEquals(TicketStatus.RESOLVED, ticket.getStatus());
+		verify(ticketSearchIndexService).index(ticket);
 		verify(ticketEventProducer).publishTicketResolved(eq(ticket), anyLong());
 	}
 
@@ -215,6 +221,7 @@ class TicketServiceTest {
 
 		assertEquals(response, ticketService.closeTicket(10L));
 		assertEquals(TicketStatus.CLOSED, ticket.getStatus());
+		verify(ticketSearchIndexService).index(ticket);
 	}
 
 	@Test

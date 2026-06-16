@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.enes.telecomcrm.common.exception.BusinessRuleException;
+import com.enes.telecomcrm.search.service.UserSearchIndexService;
 import com.enes.telecomcrm.user.dto.UserRequest;
 import com.enes.telecomcrm.user.dto.UserResponse;
 import com.enes.telecomcrm.user.entity.User;
@@ -20,11 +21,18 @@ public class UserService {
 	private final UserRepository userRepository;
 	private final UserMapper userMapper;
 	private final PasswordEncoder passwordEncoder;
+	private final UserSearchIndexService userSearchIndexService;
 
-	public UserService(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder) {
+	public UserService(
+			UserRepository userRepository,
+			UserMapper userMapper,
+			PasswordEncoder passwordEncoder,
+			UserSearchIndexService userSearchIndexService
+	) {
 		this.userRepository = userRepository;
 		this.userMapper = userMapper;
 		this.passwordEncoder = passwordEncoder;
+		this.userSearchIndexService = userSearchIndexService;
 	}
 
 	@Transactional(readOnly = true)
@@ -51,7 +59,9 @@ public class UserService {
 		user.setEmail(email);
 		user.setPassword(passwordEncoder.encode(request.password()));
 
-		return userMapper.toResponse(userRepository.save(user));
+		User savedUser = userRepository.save(user);
+		userSearchIndexService.index(savedUser);
+		return userMapper.toResponse(savedUser);
 	}
 
 	@Transactional
@@ -59,6 +69,7 @@ public class UserService {
 		User user = findUserById(id);
 		UserResponse response = userMapper.toResponse(user);
 		userRepository.delete(user);
+		userSearchIndexService.delete(id);
 		return response;
 	}
 

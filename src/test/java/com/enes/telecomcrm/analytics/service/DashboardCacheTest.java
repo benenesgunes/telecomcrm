@@ -26,6 +26,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import com.enes.telecomcrm.auth.security.UserPrincipal;
+import com.enes.telecomcrm.search.service.TicketSearchIndexService;
 import com.enes.telecomcrm.subscription.dto.SubscriptionRequest;
 import com.enes.telecomcrm.subscription.dto.SubscriptionResponse;
 import com.enes.telecomcrm.subscription.entity.Plan;
@@ -365,6 +366,11 @@ class DashboardCacheTest {
 		}
 
 		@Bean
+		TicketSearchIndexService ticketSearchIndexService() {
+			return mock(TicketSearchIndexService.class);
+		}
+
+		@Bean
 		SubscriptionMapper subscriptionMapper() {
 			return mock(SubscriptionMapper.class);
 		}
@@ -400,14 +406,16 @@ class DashboardCacheTest {
 				SubscriptionRepository subscriptionRepository,
 				TicketMapper ticketMapper,
 				EntityManager entityManager,
-				TicketEventProducer ticketEventProducer
+				TicketEventProducer ticketEventProducer,
+				TicketSearchIndexService ticketSearchIndexService
 		) {
 			return new TicketService(
 					ticketRepository,
 					subscriptionRepository,
 					ticketMapper,
 					entityManager,
-					ticketEventProducer
+					ticketEventProducer,
+					ticketSearchIndexService
 			);
 		}
 

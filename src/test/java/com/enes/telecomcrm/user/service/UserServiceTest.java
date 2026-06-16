@@ -18,6 +18,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.enes.telecomcrm.common.exception.BusinessRuleException;
+import com.enes.telecomcrm.search.service.UserSearchIndexService;
 import com.enes.telecomcrm.user.dto.UserRequest;
 import com.enes.telecomcrm.user.dto.UserResponse;
 import com.enes.telecomcrm.user.entity.Role;
@@ -31,7 +32,13 @@ class UserServiceTest {
 	private final UserRepository userRepository = mock(UserRepository.class);
 	private final UserMapper userMapper = mock(UserMapper.class);
 	private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(12);
-	private final UserService userService = new UserService(userRepository, userMapper, passwordEncoder);
+	private final UserSearchIndexService userSearchIndexService = mock(UserSearchIndexService.class);
+	private final UserService userService = new UserService(
+			userRepository,
+			userMapper,
+			passwordEncoder,
+			userSearchIndexService
+	);
 
 	@Test
 	void getAllUsers_returnsMappedResponses() {
@@ -86,6 +93,7 @@ class UserServiceTest {
 		assertNotEquals("Secure@123", savedUser.getPassword());
 		assertTrue(passwordEncoder.matches("Secure@123", savedUser.getPassword()));
 		assertEquals(Role.ROLE_USER, savedUser.getRole());
+		verify(userSearchIndexService).index(savedUser);
 	}
 
 	@Test
@@ -109,6 +117,7 @@ class UserServiceTest {
 
 		assertEquals(response, userService.deleteUser(1L));
 		verify(userRepository).delete(user);
+		verify(userSearchIndexService).delete(1L);
 	}
 
 	private User user(Long id, String email) {

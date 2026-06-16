@@ -22,6 +22,7 @@ import com.enes.telecomcrm.auth.dto.LoginResponse;
 import com.enes.telecomcrm.auth.dto.RegisterRequest;
 import com.enes.telecomcrm.auth.security.JwtUtil;
 import com.enes.telecomcrm.common.exception.BusinessRuleException;
+import com.enes.telecomcrm.search.service.UserSearchIndexService;
 import com.enes.telecomcrm.user.dto.UserResponse;
 import com.enes.telecomcrm.user.entity.Role;
 import com.enes.telecomcrm.user.entity.User;
@@ -34,7 +35,14 @@ class AuthServiceTest {
 	private final UserMapper userMapper = mock(UserMapper.class);
 	private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(12);
 	private final JwtUtil jwtUtil = mock(JwtUtil.class);
-	private final AuthService authService = new AuthService(userRepository, userMapper, passwordEncoder, jwtUtil);
+	private final UserSearchIndexService userSearchIndexService = mock(UserSearchIndexService.class);
+	private final AuthService authService = new AuthService(
+			userRepository,
+			userMapper,
+			passwordEncoder,
+			jwtUtil,
+			userSearchIndexService
+	);
 
 	@Test
 	void register_hashesPasswordAssignsUserRoleAndReturnsUserResponse() {
@@ -57,6 +65,7 @@ class AuthServiceTest {
 		ArgumentCaptor<User> userCaptor = ArgumentCaptor.forClass(User.class);
 		verify(userRepository).save(userCaptor.capture());
 		User savedUser = userCaptor.getValue();
+		verify(userSearchIndexService).index(savedUser);
 
 		assertEquals(expectedResponse, response);
 		assertEquals("john@example.com", savedUser.getEmail());

@@ -10,6 +10,7 @@ import com.enes.telecomcrm.auth.dto.LoginResponse;
 import com.enes.telecomcrm.auth.dto.RegisterRequest;
 import com.enes.telecomcrm.auth.security.JwtUtil;
 import com.enes.telecomcrm.common.exception.BusinessRuleException;
+import com.enes.telecomcrm.search.service.UserSearchIndexService;
 import com.enes.telecomcrm.user.dto.UserResponse;
 import com.enes.telecomcrm.user.entity.Role;
 import com.enes.telecomcrm.user.entity.User;
@@ -23,17 +24,20 @@ public class AuthService {
 	private final UserMapper userMapper;
 	private final PasswordEncoder passwordEncoder;
 	private final JwtUtil jwtUtil;
+	private final UserSearchIndexService userSearchIndexService;
 
 	public AuthService(
 			UserRepository userRepository,
 			UserMapper userMapper,
 			PasswordEncoder passwordEncoder,
-			JwtUtil jwtUtil
+			JwtUtil jwtUtil,
+			UserSearchIndexService userSearchIndexService
 	) {
 		this.userRepository = userRepository;
 		this.userMapper = userMapper;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtUtil = jwtUtil;
+		this.userSearchIndexService = userSearchIndexService;
 	}
 
 	@Transactional
@@ -48,7 +52,9 @@ public class AuthService {
 		user.setPassword(passwordEncoder.encode(request.password()));
 		user.setRole(Role.ROLE_USER);
 
-		return userMapper.toResponse(userRepository.save(user));
+		User savedUser = userRepository.save(user);
+		userSearchIndexService.index(savedUser);
+		return userMapper.toResponse(savedUser);
 	}
 
 	@Transactional(readOnly = true)

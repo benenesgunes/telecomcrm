@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.enes.telecomcrm.common.exception.BusinessRuleException;
 import com.enes.telecomcrm.common.exception.UnauthorizedException;
 import com.enes.telecomcrm.common.util.SecurityUtils;
+import com.enes.telecomcrm.search.service.TicketSearchIndexService;
 import com.enes.telecomcrm.subscription.entity.SubscriptionStatus;
 import com.enes.telecomcrm.subscription.repository.SubscriptionRepository;
 import com.enes.telecomcrm.ticket.dto.TicketAssignRequest;
@@ -37,19 +38,22 @@ public class TicketService {
 	private final TicketMapper ticketMapper;
 	private final EntityManager entityManager;
 	private final TicketEventProducer ticketEventProducer;
+	private final TicketSearchIndexService ticketSearchIndexService;
 
 	public TicketService(
 			TicketRepository ticketRepository,
 			SubscriptionRepository subscriptionRepository,
 			TicketMapper ticketMapper,
 			EntityManager entityManager,
-			TicketEventProducer ticketEventProducer
+			TicketEventProducer ticketEventProducer,
+			TicketSearchIndexService ticketSearchIndexService
 	) {
 		this.ticketRepository = ticketRepository;
 		this.subscriptionRepository = subscriptionRepository;
 		this.ticketMapper = ticketMapper;
 		this.entityManager = entityManager;
 		this.ticketEventProducer = ticketEventProducer;
+		this.ticketSearchIndexService = ticketSearchIndexService;
 	}
 
 	@Transactional
@@ -68,6 +72,7 @@ public class TicketService {
 		ticket.setStatus(TicketStatus.OPEN);
 
 		Ticket savedTicket = ticketRepository.save(ticket);
+		ticketSearchIndexService.index(savedTicket);
 		ticketEventProducer.publishTicketCreated(savedTicket);
 		return ticketMapper.toResponse(savedTicket);
 	}
@@ -105,7 +110,9 @@ public class TicketService {
 		ticket.setAssignedAgent(agent);
 		ticket.setStatus(TicketStatus.IN_PROGRESS);
 
-		return ticketMapper.toResponse(ticketRepository.save(ticket));
+		Ticket savedTicket = ticketRepository.save(ticket);
+		ticketSearchIndexService.index(savedTicket);
+		return ticketMapper.toResponse(savedTicket);
 	}
 
 	@Transactional
@@ -128,6 +135,7 @@ public class TicketService {
 		ticket.setStatus(TicketStatus.RESOLVED);
 
 		Ticket savedTicket = ticketRepository.save(ticket);
+		ticketSearchIndexService.index(savedTicket);
 		ticketEventProducer.publishTicketResolved(savedTicket, resolutionTimeMinutes(savedTicket));
 		return ticketMapper.toResponse(savedTicket);
 	}
@@ -146,7 +154,9 @@ public class TicketService {
 		ensureNotClosed(ticket);
 
 		ticket.setStatus(TicketStatus.CLOSED);
-		return ticketMapper.toResponse(ticketRepository.save(ticket));
+		Ticket savedTicket = ticketRepository.save(ticket);
+		ticketSearchIndexService.index(savedTicket);
+		return ticketMapper.toResponse(savedTicket);
 	}
 
 	private void ensureNotClosed(Ticket ticket) {
